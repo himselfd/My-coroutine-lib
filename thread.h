@@ -1,74 +1,77 @@
-#ifndef _THREAD_H_
+#ifndef _THREAD_H_  // 防止头文件被重复包含
 #define _THREAD_H_
 
-#include <mutex>
-#include <condition_variable>
-#include <functional>
-namespace sylar
-{
-// 用于线程方法间的同步
-class Semaphore{
+#include <mutex>              // 引入互斥锁
+#include <condition_variable> // 引入条件变量
+#include <functional>         // 引入 std::function
+
+namespace sylar {
+
+// 信号量类，用于线程间的同步
+class Semaphore {
 private:
-    std::mutex mtx;
-    std::condition_variable cv;
-    int count;
+    std::mutex mtx;              // 互斥锁，用于保护共享资源
+    std::condition_variable cv;  // 条件变量，用于线程间通信
+    int count;                   // 信号量的计数器
 
 public:
-    //信号量初始化为0
-    explicit Semaphore(int count_=0):count(count_){}
+    // 构造函数，初始化信号量的计数器
+    explicit Semaphore(int count_ = 0) : count(count_) {}
 
-    //P操作
-    void wait(){
-        std::unique_lock<std::mutex> lock(mtx);
-        if(count==0){
-            cv.wait(lock);//等待V操作
+    // P 操作（等待信号量）
+    void wait() {
+        std::unique_lock<std::mutex> lock(mtx);  // 加锁
+        if (count == 0) {                        // 如果计数器为 0，等待信号量
+            cv.wait(lock);                       // 等待 V 操作唤醒
         }
-        count--;
+        count--;                                 // 计数器减 1
     }
 
-    //V操作
-    void signal(){
-        std::unique_lock<std::mutex> lock(mtx);
-        count++;
-        cv.notify_one();
+    // V 操作（释放信号量）
+    void signal() {
+        std::unique_lock<std::mutex> lock(mtx);  // 加锁
+        count++;                                 // 计数器加 1
+        cv.notify_one();                         // 唤醒一个等待的线程
     }
 };
 
-//一共两种线程：1.由系统自动创建的主线程 2.由thread类创建的线程
-class Thread{
+// 线程类，封装线程的创建、管理和同步
+class Thread {
 public:
-    Thread(std::function<void()> cb,const std::string& name);
-    ~Thread();
+    // 构造函数，传入线程函数和线程名称
+    Thread(std::function<void()> cb, const std::string& name);
+    ~Thread();  // 析构函数
 
+    // 获取线程 ID
     pid_t getId() const { return m_id; }
+    // 获取线程名称
     const std::string& getName() const { return m_name; }
 
+    // 等待线程执行完毕
     void join();
-    
-public:
-    //获取系统分配的线程id
-    static pid_t GetThreadId();
-    //获取当前所在线程
-    static Thread* GetThis();
 
-    //获取当前线程的名字
+public:
+    // 静态方法：获取当前线程的系统级 ID
+    static pid_t GetThreadId();
+    // 静态方法：获取当前线程的 Thread 对象
+    static Thread* GetThis();
+    // 静态方法：获取当前线程的名称
     static const std::string& GetName();
-    //设置当前线程的名字
+    // 静态方法：设置当前线程的名称
     static void SetName(const std::string& name);
 
 private:
-    //线程函数
+    // 静态方法：线程的入口函数
     static void* run(void* arg);
 
 private:
-    pid_t m_id=-1;//进程id
-    pthread_t m_thread=0;//线程
-
-    //线程需要运行的函数
-    std::function<void()> m_cb;
-    std::string m_name;//线程的name
-
-    Semaphore m_semaphore;//引入信号量类来完成线程的同步创建
+    pid_t m_id = -1;            // 线程的系统级 ID
+    pthread_t m_thread = 0;     // 线程句柄
+    std::function<void()> m_cb; // 线程要执行的任务
+    std::string m_name;         // 线程的名称
+    Semaphore m_semaphore;      // 信号量，用于线程同步
 };
-}
-#endif
+
+}  // namespace sylar
+
+#endif  // _THREAD_H_
