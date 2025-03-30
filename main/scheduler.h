@@ -1,7 +1,7 @@
 #ifndef _SCHEDULER_H_  // 防止头文件重复包含
 #define _SCHEDULER_H_
 
-//#include "hook.h"     
+#include "hook.h"     
 #include "fiber.h"      // 协程实现
 #include "thread.h"     // 线程实现
 
